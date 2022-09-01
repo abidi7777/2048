@@ -1,3 +1,3 @@
 # 2048
 
-A clone 2048 game
+A clone of 2048 game
