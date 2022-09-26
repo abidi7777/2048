@@ -65,9 +65,7 @@ export default class InputManager {
     );
   }
 
-  async #keyboardInputHandler(e) {
-    this.deactivate();
-    await this.#callback(e.key);
-    this.activate();
+  #keyboardInputHandler(e) {
+    this.#callback(e.key);
   }
 }

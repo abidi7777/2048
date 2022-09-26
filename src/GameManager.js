@@ -1,5 +1,4 @@
 import MicroModal from 'micromodal';
-import _noop from 'lodash-es/noop';
 
 import { defaultCurrentGameState, DIRECTIONS } from './2048.constants';
 import Grid from './Grid';
@@ -25,34 +24,27 @@ export default class GameManager {
 
   #state;
 
-  #onWin;
+  #$winningTile;
 
   #winningTile;
 
-  constructor({ gameboardSelector, winningTile = 2048, onWin = _noop }) {
+  #microModalConfig;
+
+  constructor({ gameboardSelector, winningTileSelector, winningTile = 2048 }) {
     this.#state = gameState;
     this.#$gameboard = document.querySelector(gameboardSelector);
+    this.#$winningTile = document.querySelector(winningTileSelector);
     this.#inputManager = new InputManager(this.#inputHandler.bind(this), this.#$gameboard);
     this.#winningTile = winningTile;
-    this.#onWin = onWin;
     this.#hasWon = gameState.currentGame.highestTile >= winningTile;
+    this.#microModalConfig = {
+      onShow: this.#onShowModalHandler.bind(this),
+      onClose: this.#onCloseModalHandler.bind(this),
+    };
 
-    if (this.#hasWon) { onWin(winningTile); }
+    if (this.#hasWon) { MicroModal.show('game-won-modal', this.#microModalConfig); }
 
-    MicroModal.init({
-      onShow: (modal) => {
-        if (modal.id === 'stats-modal') {
-          populateStatsModal(modal, { ...this.#state });
-        }
-
-        this.#inputManager.deactivate();
-      },
-      onClose: () => {
-        if (this.#grid.canMoveTilesAnyDirection()) {
-          this.#inputManager.activate();
-        } else { this.resetGame(); }
-      },
-    });
+    MicroModal.init(this.#microModalConfig);
   }
 
   init() {
@@ -162,6 +154,23 @@ export default class GameManager {
     }
   }
 
+  #onShowModalHandler(modal) {
+    if (modal.id === 'stats-modal') {
+      populateStatsModal(modal, { ...this.#state });
+    }
+
+    if (modal.id === 'game-won-modal') {
+      this.#$winningTile.textContent = this.#winningTile;
+    }
+    this.#inputManager.deactivate();
+  }
+
+  #onCloseModalHandler() {
+    if (this.#grid.canMoveTilesAnyDirection()) {
+      this.#inputManager.activate();
+    } else { this.resetGame(); }
+  }
+
   async #handleGameOver() {
     this.#inputManager.deactivate();
 
@@ -187,10 +196,7 @@ export default class GameManager {
       }),
     );
 
-    MicroModal.show('stats-modal', {
-      onShow: (modal) => populateStatsModal(modal, { ...this.#state }),
-      onClose: () => this.resetGame(),
-    });
+    MicroModal.show('stats-modal', this.#microModalConfig);
   }
 
   async #inputHandler(direction) {
@@ -207,12 +213,10 @@ export default class GameManager {
       this.saveCurrentState();
 
       if (!this.#hasWon && this.#state.currentGame.highestTile === this.#winningTile) {
-        this.#onWin(this.#winningTile);
+        MicroModal.show('game-won-modal', this.#microModalConfig);
 
         this.#hasWon = true;
-      }
-
-      if (this.#grid.canMoveTilesAnyDirection()) {
+      } else if (this.#grid.canMoveTilesAnyDirection()) {
         this.#inputManager.activate();
       } else if (newTile) {
         newTile.awaitTransition().then(() => this.#handleGameOver());
