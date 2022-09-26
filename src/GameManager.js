@@ -1,10 +1,12 @@
 import MicroModal from 'micromodal';
+import _noop from 'lodash-es/noop';
 
 import { defaultCurrentGameState, DIRECTIONS } from './2048.constants';
 import Grid from './Grid';
 import InputManager from './InputManager';
 import InvalidMoveError from './InvalidMoveError';
 import Tile from './Tile';
+import deepClone from './utils/deepClone';
 import gameState from './data/gameState';
 import populateStatsModal from './utils/populateStatsModal';
 import sleep from './utils/sleep';
@@ -12,6 +14,8 @@ import updateScore from './utils/updateScore';
 
 export default class GameManager {
   #hasGameStarted = false;
+
+  #hasWon = false;
 
   #$gameboard;
 
@@ -21,10 +25,19 @@ export default class GameManager {
 
   #state;
 
-  constructor(gameboardSelector) {
+  #onWin;
+
+  #winningTile;
+
+  constructor({ gameboardSelector, winningTile = 2048, onWin = _noop }) {
     this.#state = gameState;
     this.#$gameboard = document.querySelector(gameboardSelector);
     this.#inputManager = new InputManager(this.#inputHandler.bind(this), this.#$gameboard);
+    this.#winningTile = winningTile;
+    this.#onWin = onWin;
+    this.#hasWon = gameState.currentGame.highestTile >= winningTile;
+
+    if (this.#hasWon) { onWin(winningTile); }
 
     MicroModal.init({
       onShow: (modal) => {
@@ -113,8 +126,9 @@ export default class GameManager {
   }
 
   resetGame() {
-    this.#state.currentGame = { ...defaultCurrentGameState };
+    this.#state.currentGame = { ...deepClone(defaultCurrentGameState) };
     this.#hasGameStarted = false;
+    this.#hasWon = false;
 
     this.init();
 
@@ -191,6 +205,12 @@ export default class GameManager {
 
       const [newTile] = this.createRandomTiles(1);
       this.saveCurrentState();
+
+      if (!this.#hasWon && this.#state.currentGame.highestTile === this.#winningTile) {
+        this.#onWin(this.#winningTile);
+
+        this.#hasWon = true;
+      }
 
       if (this.#grid.canMoveTilesAnyDirection()) {
         this.#inputManager.activate();

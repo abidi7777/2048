@@ -2,15 +2,17 @@ import DeepProxy from 'proxy-deep';
 import _defaultsDeep from 'lodash-es/defaultsDeep';
 
 import { defaultGameState } from '../2048.constants';
+import deepClone from '../utils/deepClone';
 
+const clonedGameState = deepClone(defaultGameState);
 let gameState = null;
 
 try {
-  gameState = { ...defaultGameState, ...JSON.parse(localStorage.getItem('gameState')) };
+  gameState = { ...clonedGameState, ...JSON.parse(localStorage.getItem('gameState')) };
   gameState.currentGame.date = new Date(gameState.currentGame.date);
 
-  _defaultsDeep(gameState, defaultGameState);
-} catch (e) { gameState = { ...defaultGameState }; }
+  _defaultsDeep(gameState, clonedGameState);
+} catch (e) { gameState = { ...clonedGameState }; }
 
 export default new DeepProxy(gameState, {
   get(...args) {
