@@ -5,7 +5,7 @@ import GameManager from './GameManager';
 const gameManager = new GameManager({
   gameboardSelector: '#twenty-fourty-eight-gameboard',
   winningTileSelector: '#winning-tile',
-  winningTile: 8,
+  winningTile: 2048,
 });
 
 gameManager.init();
